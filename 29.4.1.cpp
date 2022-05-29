@@ -1,46 +1,89 @@
 #include <iostream>
 
+class Visitor;
 class Animal;
 class Dog;
 class Cat;
 
-class Visitor {
+class DogVisitor {
 public:
-    enum AnimalType {none, dogType, catType};
-    AnimalType value = none;
+    virtual void dogMessage (Dog* ptr) {std::cout << "Woof";}
+    virtual void dogMessage (Cat* ptr) {std::cout << "Bark";}
+};
 
+class CatVisitor {
 public:
-    void visit(Dog &ref) {value = dogType;}
-    void visit(Cat &ref) {value = catType;}
-    virtual ~Visitor() = default;
+    virtual void catMessage (Dog* ptr) {std::cout << "Meow";}
+    virtual void catMessage (Cat* ptr) {std::cout << "Purr";}
 };
 
 class Animal {
 public:
-    virtual void accept(Visitor &v) = 0;
+    virtual void firstAccept (Visitor* v, Animal* ptr) = 0;
+    virtual void secondAccept (DogVisitor*) = 0;
+    virtual void secondAccept (CatVisitor*) = 0;
     virtual ~Animal() = default;
 };
 
 class Dog : public Animal {
-    void accept(Visitor &v) override {v.visit(*this);}
+public:
+    void firstAccept (Visitor*, Animal*) override;
+    void secondAccept (DogVisitor*) override;
+    void secondAccept (CatVisitor*) override;
 };
 
 class Cat : public Animal {
-    void accept(Visitor &v) override {v.visit(*this);}
+public:
+    void firstAccept (Visitor*, Animal*) override;
+    void secondAccept (CatVisitor*) override;
+    void secondAccept (DogVisitor*) override;
 };
 
-void meeting(Animal* firstPtr, Animal* secondPtr) {
-    Visitor v1, v2;
-    firstPtr->accept(v1);
-    secondPtr->accept(v2);
-    int flag = static_cast<int> (v1.value) << 2 | static_cast<int> (v2.value);
-    switch (flag) {
-        case 0b0101: std::cout << "Woof-Woof" << std::endl; break;
-        case 0b0110: std::cout << "Bark Meow" << std::endl; break;
-        case 0b1001: std::cout << "Meow Bark" << std::endl; break;
-        case 0b1010: std::cout << "Purr Purr" << std::endl; break;
-        default: std::cout << "Unknown animal" << std::endl;
+
+class Visitor {
+public:
+    virtual void firstFn (Dog* arg1, Animal* arg2) {
+        DogVisitor v;
+        arg2->secondAccept(&v);
     }
+
+    virtual void firstFn (Cat* arg1, Animal* arg2) {
+        CatVisitor v;
+        arg2->secondAccept(&v);
+    }
+
+    virtual ~Visitor() = default;
+};
+
+void Dog::firstAccept (Visitor* v, Animal* ptr) {
+    v->firstFn(this, ptr);
+}
+
+void Dog::secondAccept (DogVisitor* v) {
+    v->dogMessage(this);
+}
+
+void Dog::secondAccept (CatVisitor* v) {
+    v->catMessage(this);
+}
+
+void Cat::firstAccept (Visitor* v, Animal* ptr) {
+    v->firstFn(this, ptr);
+}
+void Cat::secondAccept (CatVisitor* v) {
+    v->catMessage(this);
+}
+
+void Cat::secondAccept (DogVisitor* v) {
+    v->dogMessage(this);
+}
+
+void meeting (Animal* firstPtr, Animal* secondPtr) {
+    Visitor v1, v2;
+    firstPtr->firstAccept(&v1, secondPtr);
+    std::cout << " ";
+    secondPtr->firstAccept(&v2, firstPtr);
+    std::cout << std::endl;
 }
 
 int main() {
